@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Tournaments - Play & Win</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400&display=swap" rel="stylesheet">
+    
+    <!-- External Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #E2E8F0;
+            --text-dark: #1E293B;
+            --accent-blue: #2563EB;
+            --accent-gold: #FBBF24;
+            --accent-red: #DC2626;
+            --border: #CBD5E1;
+            --success-green: #059669;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Russo One', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 0 16px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--accent-blue), #3B82F6);
+            color: white;
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .wallet-btn {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .nav-item.active {
+            color: var(--accent-blue);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-text {
+            font-size: 12px;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding-bottom: 80px;
+            min-height: calc(100vh - 80px);
+        }
+
+        .section {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--accent-blue), #3B82F6);
+            color: white;
+            padding: 40px 16px;
+            text-align: center;
+            margin: 0 -16px 20px -16px;
+        }
+
+        .hero h1 {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .cta-btn {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+            border: none;
+            padding: 16px 32px;
+            border-radius: 25px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+        }
+
+        /* Tournament Cards */
+        .tournament-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--accent-blue);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tournament-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .tournament-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .tournament-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .tournament-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .tournament-title {
+            font-size: 18px;
+            color: var(--text-dark);
+        }
+
+        .tournament-prize {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tournament-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .join-btn {
+            width: 100%;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .join-btn:hover {
+            background: #1D4ED8;
+            transform: translateY(-2px);
+        }
+
+        .join-btn:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Referral Section */
+        .referral-card {
+            background: linear-gradient(135deg, var(--accent-gold), #F59E0B);
+            color: var(--text-dark);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .referral-code {
+            background: rgba(255,255,255,0.9);
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 16px 0;
+            letter-spacing: 2px;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .share-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .whatsapp { background: #25D366; color: white; }
+        .telegram { background: #0088CC; color: white; }
+        .copy { background: white; color: var(--text-dark); }
+
+        .earnings-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        /* Profile Section */
+        .profile-header {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-blue);
+        }
+
+        .registrations-list {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .animate-bounce {
+            animation: bounce 1s;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success/Error Messages */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success-green);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            z-index: 1001;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(10px);
+        }
+
+        .toast.error {
+            background: var(--accent-red);
+        }
+
+        /* Responsive */
+        @media (min-width: 768px) {
+            .tournament-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+            
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">🔥 FreeFire Tournaments</div>
+                <button class="wallet-btn" onclick="openTopUpModal()">
+                    💰 ₹<span id="walletBalance">500</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <div class="hero">
+                <h1>Win Big in Free Fire!</h1>
+                <p>Join daily tournaments and compete for amazing prizes</p>
+                <button class="cta-btn" onclick="showSection('tournaments')">Play Now 🎮</button>
+            </div>
+            
+            <div class="container">
+                <h2 style="margin-bottom: 20px;">🔥 Live Tournaments</h2>
+                <div id="liveTournaments" class="tournament-grid">
+                    <!-- Live tournaments will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Tournaments Section -->
+        <section id="tournaments" class="section">
+            <div class="container">
+                <h2 style="margin-bottom: 20px;">All Tournaments</h2>
+                
+                <div class="tournament-tabs">
+                    <button class="tab-btn active" onclick="switchTab('live')">Live</button>
+                    <button class="tab-btn" onclick="switchTab('upcoming')">Upcoming</button>
+                    <button class="tab-btn" onclick="switchTab('past')">Past</button>
+                </div>
+                
+                <div id="tournamentsGrid" class="tournament-grid">
+                    <!-- Tournaments will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Refer & Earn Section -->
+        <section id="refer" class="section">
+            <div class="container">
+                <div class="referral-card">
+                    <h2>💸 Refer & Earn</h2>
+                    <p>Invite friends and earn ₹50 for each successful registration!</p>
+                    
+                    <div class="referral-code" id="referralCode">FF2025FIRE</div>
+                    
+                    <div class="share-buttons">
+                        <button class="share-btn whatsapp" onclick="shareOnWhatsApp()">WhatsApp</button>
+                        <button class="share-btn telegram" onclick="shareOnTelegram()">Telegram</button>
+                        <button class="share-btn copy" onclick="copyReferralCode()">Copy Link</button>
+                    </div>
+                </div>
+                
+                <div class="earnings-card">
+                    <h3>Your Earnings</h3>
+                    <div class="stat-value">₹<span id="referralEarnings">750</span></div>
+                    <p>From <span id="referralCount">15</span> successful referrals</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section id="profile" class="section">
+            <div class="container">
+                <div class="profile-header">
+                    <div class="avatar">🎮</div>
+                    <h2 id="userName">Gaming Pro</h2>
+                    <p>Free Fire UID: <span id="userUID">987654321</span></p>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="tournamentsPlayed">24</div>
+                            <div>Tournaments</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="tournamentsWon">8</div>
+                            <div>Wins</div>
+                        </div>
+                    </div>
+                    
+                    <button class="cta-btn" onclick="openTopUpModal()" style="margin-top: 16px;">
+                        💰 Top Up Wallet
+                    </button>
+                </div>
+                
+                <div class="registrations-list">
+                    <h3 style="margin-bottom: 16px;">My Registrations</h3>
+                    <div id="userRegistrations">
+                        <!-- User registrations will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="showSection('home')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            <span class="nav-text">Home</span>
+        </div>
+        <div class="nav-item" onclick="showSection('tournaments')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="nav-text">Tournaments</span>
+        </div>
+        <div class="nav-item" onclick="showSection('refer')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+            </svg>
+            <span class="nav-text">Refer</span>
+        </div>
+        <div class="nav-item" onclick="showSection('profile')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span class="nav-text">Profile</span>
+        </div>
+    </nav>
+
+    <!-- Tournament Registration Modal -->
+    <div id="registrationModal" class="modal">
+        <div class="modal-content animate-slide-in">
+            <div class="modal-header">
+                <h3 class="modal-title">Join Tournament</h3>
+                <button class="close-btn" onclick="closeModal('registrationModal')">&times;</button>
+            </div>
+            
+            <div id="tournamentDetails">
+                <!-- Tournament details will be populated here -->
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Your Name</label>
+                <input type="text" class="form-input" id="playerName" placeholder="Enter your gaming name">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Free Fire UID</label>
+                <input type="text" class="form-input" id="playerUID" placeholder="Enter your Free Fire UID">
+            </div>
+            
+            <button class="join-btn" onclick="confirmRegistration()">
+                Pay ₹<span id="entryFeeAmount">50</span> & Join
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Up Modal -->
+    <div id="topUpModal" class="modal">
+        <div class="modal-content animate-slide-in">
+            <div class="modal-header">
+                <h3 class="modal-title">💰 Top Up Wallet</h3>
+                <button class="close-btn" onclick="closeModal('topUpModal')">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Amount</label>
+                <select class="form-input" id="topUpAmount">
+                    <option value="100">₹100</option>
+                    <option value="500">₹500</option>
+                    <option value="1000">₹1000</option>
+                    <option value="2000">₹2000</option>
+                </select>
+            </div>
+            
+            <button class="cta-btn" onclick="processTopUp()" style="width: 100%;">
+                💳 Pay with Razorpay
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            // Add your Firebase config here
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Global variables
+        let currentUser = null;
+        let currentTournament = null;
+        let currentTab = 'live';
+
+        // Sample data for demo
+        const sampleTournaments = [
+            {
+                id: 'tourn1',
+                title: 'Sunday Clash',
+                matchTime: '2025-01-20T17:00',
+                map: 'Bermuda',
+                prize: 1000,
+                entryFee: 50,
+                roomId: '12345',
+                roomPass: 'FIRE123',
+                maxPlayers: 100,
+                registeredPlayers: 47,
+                status: 'live'
+            },
+            {
+                id: 'tourn2',
+                title: 'Weekly Championship',
+                matchTime: '2025-01-22T19:00',
+                map: 'Purgatory',
+                prize: 2500,
+                entryFee: 100,
+                roomId: '67890',
+                roomPass: 'CHAMP25',
+                maxPlayers: 50,
+                registeredPlayers: 23,
+                status: 'upcoming'
+            },
+            {
+                id: 'tourn3',
+                title: 'Midnight Battle',
+                matchTime: '2025-01-19T23:00',
+                map: 'Kalahari',
+                prize: 500,
+                entryFee: 25,
+                roomId: '11111',
+                roomPass: 'NIGHT1',
+                maxPlayers: 80,
+                registeredPlayers: 80,
+                status: 'past'
+            }
+        ];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            loadTournaments();
+            loadUserData();
+        });
+
+        function initializeApp() {
+            // Auth state listener
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    loadUserProfile();
+                } else {
+                    // Auto sign in for demo
+                    signInAnonymously();
+                }
+            });
+        }
+
+        function signInAnonymously() {
+            auth.signInAnonymously().catch(error => {
+                console.error('Auth error:', error);
+            });
+        }
+
+        function loadUserProfile() {
+            // Load user data from Firestore or use demo data
+            document.getElementById('userName').textContent = 'Gaming Pro';
+            document.getElementById('userUID').textContent = '987654321';
+            document.getElementById('walletBalance').textContent = '500';
+            document.getElementById('referralEarnings').textContent = '750';
+            document.getElementById('referralCount').textContent = '15';
+            document.getElementById('tournamentsPlayed').textContent = '24';
+            document.getElementById('tournamentsWon').textContent = '8';
+        }
+
+        function loadUserData() {
+            // Load user registrations
+            const registrations = [
+                { tournament: 'Sunday Clash', status: 'Registered', time: '17:00 Today' },
+                { tournament: 'Weekly Championship', status: 'Registered', time: '19:00 Jan 22' }
+            ];
+
+            const container = document.getElementById('userRegistrations');
+            container.innerHTML = registrations.map(reg => `
+                <div class="tournament-card" style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold;">${reg.tournament}</div>
+                            <div style="font-size: 14px; color: #64748B;">${reg.time}</div>
+                        </div>
+                        <div style="color: var(--success-green); font-weight: bold;">${reg.status}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadTournaments() {
+            const liveTournaments = sampleTournaments.filter(t => t.status === 'live');
+            
+            // Load live tournaments for home page
+            document.getElementById('liveTournaments').innerHTML = liveTournaments.map(createTournamentCard).join('');
+            
+            // Load tournaments for tournaments page
+            loadTournamentsByTab(currentTab);
+        }
+
+        function loadTournamentsByTab(tab) {
+            const tournaments = sampleTournaments.filter(t => t.status === tab);
+            document.getElementById('tournamentsGrid').innerHTML = tournaments.map(createTournamentCard).join('');
+        }
+
+        function createTournamentCard(tournament) {
+            const isRegistered = Math.random() > 0.7; // Demo logic
+            const isFull = tournament.registeredPlayers >= tournament.maxPlayers;
+            
+            return `
+                <div class="tournament-card">
+                    <div class="tournament-header">
+                        <h3 class="tournament-title">${tournament.title}</h3>
+                        <div class="tournament-prize">₹${tournament.prize}</div>
+                    </div>
+                    
+                    <div class="tournament-details">
+                        <div class="detail-item">
+                            <span>🕒</span>
+                            <span>${formatTime(tournament.matchTime)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>🗺️</span>
+                            <span>${tournament.map}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>👥</span>
+                            <span>${tournament.registeredPlayers}/${tournament.maxPlayers}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>💰</span>
+                            <span>₹${tournament.entryFee} entry</span>
+                        </div>
+                    </div>
+                    
+                    <button class="join-btn ${isRegistered ? 'registered' : ''}" 
+                            ${isFull || isRegistered ? 'disabled' : ''} 
+                            onclick="openRegistrationModal('${tournament.id}')">
+                        ${isRegistered ? 'Registered ✓' : isFull ? 'Tournament Full' : 'Join Now'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            if (date.toDateString() === today.toDateString()) {
+                return `Today ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (date.toDateString() === tomorrow.toDateString()) {
+                return `Tomorrow ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+            } else {
+                return date.toLocaleDateString('en-IN', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+        }
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update bottom nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Load tournaments for selected tab
+            loadTournamentsByTab(tab);
+        }
+
+        function openRegistrationModal(tournamentId) {
+            currentTournament = sampleTournaments.find(t => t.id === tournamentId);
+            
+            document.getElementById('tournamentDetails').innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4>${currentTournament.title}</h4>
+                    <p>📅 ${formatTime(currentTournament.matchTime)}</p>
+                    <p>🗺️ Map: ${currentTournament.map}</p>
+                    <p>🏆 Prize: ₹${currentTournament.prize}</p>
+                    <p>💰 Entry Fee: ₹${currentTournament.entryFee}</p>
+                </div>
+            `;
+            
+            document.getElementById('entryFeeAmount').textContent = currentTournament.entryFee;
+            document.getElementById('registrationModal').classList.add('active');
+        }
+
+        function confirmRegistration() {
+            const playerName = document.getElementById('playerName').value;
+            const playerUID = document.getElementById('playerUID').value;
+            
+            if (!playerName || !playerUID) {
+                showToast('Please fill all fields', 'error');
+                return;
+            }
+            
+            // Process payment and registration
+            processPayment(currentTournament.entryFee, () => {
+                joinTournament(currentTournament.id, {
+                    name: playerName,
+                    uid: playerUID,
+                    userId: currentUser.uid
+                });
+            });
+        }
+
+        async function joinTournament(tournamentId, playerData) {
+            try {
+                // Add registration to Firestore
+                await db.collection('tournaments').doc(tournamentId)
+                    .collection('registrations').add({
+                        ...playerData,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                
+                // Update user wallet
+                const currentBalance = parseInt(document.getElementById('walletBalance').textContent);
+                const newBalance = currentBalance - currentTournament.entryFee;
+                document.getElementById('walletBalance').textContent = newBalance;
+                
+                // Update tournament registered count
+                currentTournament.registeredPlayers++;
+                
+                closeModal('registrationModal');
+                showToast('Successfully registered for tournament!');
+                loadTournaments();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showToast('Registration failed. Please try again.', 'error');
+            }
+        }
+
+        function processPayment(amount, onSuccess) {
+            // Razorpay integration
+            const options = {
+                key: 'your_razorpay_key_id',
+                amount: amount * 100, // Razorpay expects amount in paise
+                currency: 'INR',
+                name: 'FreeFire Tournaments',
+                description: `Tournament Entry Fee`,
+                handler: function(response) {
+                    showToast('Payment successful!');
+                    onSuccess();
+                },
+                prefill: {
+                    name: 'Gaming Pro',
+                    email: 'gamer@example.com',
+                    contact: '9999999999'
+                },
+                theme: {
+                    color: '#2563EB'
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function openTopUpModal() {
+            document.getElementById('topUpModal').classList.add('active');
+        }
+
+        function processTopUp() {
+            const amount = parseInt(document.getElementById('topUpAmount').value);
+            
+            const options = {
+                key: 'your_razorpay_key_id',
+                amount: amount * 100,
+                currency: 'INR',
+                name: 'FreeFire Tournaments',
+                description: `Wallet Top Up`,
+                handler: function(response) {
+                    const currentBalance = parseInt(document.getElementById('walletBalance').textContent);
+                    const newBalance = currentBalance + amount;
+                    document.getElementById('walletBalance').textContent = newBalance;
+                    
+                    closeModal('topUpModal');
+                    showToast(`Wallet topped up with ₹${amount}!`);
+                },
+                prefill: {
+                    name: 'Gaming Pro',
+                    email: 'gamer@example.com',
+                    contact: '9999999999'
+                },
+                theme: {
+                    color: '#2563EB'
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function shareOnWhatsApp() {
+            const message = `Join me on FreeFire Tournaments! Use my referral code ${document.getElementById('referralCode').textContent} and get ₹50 bonus! Download: https://freefiretournaments.com`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+        }
+
+        function shareOnTelegram() {
+            const message = `Join me on FreeFire Tournaments! Use my referral code ${document.getElementById('referralCode').textContent} and get ₹50 bonus! Download: https://freefiretournaments.com`;
+            window.open(`https://t.me/share/url?url=https://freefiretournaments.com&text=${encodeURIComponent(message)}`, '_blank');
+        }
+
+        function copyReferralCode() {
+            const referralLink = `https://freefiretournaments.com?ref=${document.getElementById('referralCode').textContent}`;
+            navigator.clipboard.writeText(referralLink).then(() => {
+                showToast('Referral link copied!');
+            });
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

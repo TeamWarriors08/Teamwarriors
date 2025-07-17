@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeFire Tournament Admin</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400&display=swap" rel="stylesheet">
+    
+    <!-- External Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #E2E8F0;
+            --text-dark: #1E293B;
+            --accent-blue: #2563EB;
+            --accent-gold: #FBBF24;
+            --accent-red: #DC2626;
+            --border: #CBD5E1;
+            --success-green: #059669;
+            --sidebar-bg: #1E293B;
+            --sidebar-hover: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Russo One', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* Layout */
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--sidebar-hover);
+        }
+
+        .sidebar-logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--accent-gold);
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: none;
+            background: none;
+            color: white;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .nav-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        .nav-item.active {
+            background: var(--accent-blue);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 16px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.shifted {
+            margin-left: 280px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .notification-btn {
+            position: relative;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: var(--accent-red);
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            padding: 24px;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+        }
+
+        .stat-card.gold::before { background: var(--accent-gold); }
+        .stat-card.green::before { background: var(--success-green); }
+        .stat-card.red::before { background: var(--accent-red); }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #64748B;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .stat-change.positive { color: var(--success-green); }
+        .stat-change.negative { color: var(--accent-red); }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .data-table tr:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1D4ED8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-success {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-gold {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--text-dark);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Search and Filters */
+        .search-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-live { background: var(--success-green); color: white; }
+        .status-upcoming { background: var(--accent-blue); color: white; }
+        .status-past { background: var(--border); color: var(--text-dark); }
+        .status-active { background: var(--success-green); color: white; }
+        .status-inactive { background: var(--accent-red); color: white; }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .quick-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .quick-action-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success-green);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            z-index: 1001;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: var(--accent-red);
+        }
+
+        .toast.warning {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+            }
+            
+            .main-content.shifted {
+                margin-left: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .page-btn:hover,
+        .page-btn.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🔥 Admin Panel</div>
+            </div>
+            
+            <div class="sidebar-nav">
+                <button class="nav-item active" onclick="showSection('dashboard')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                    Dashboard
+                </button>
+                
+                <button class="nav-item" onclick="showSection('tournaments')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Tournaments
+                </button>
+                
+                <button class="nav-item" onclick="showSection('players')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 7c0 2.21-1.79 4-4 4s-4-1.79-4-4 1.79-4 4-4 4 1.79 4 4zm-4 7c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    Players
+                </button>
+                
+                <button class="nav-item" onclick="showSection('analytics')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                    Analytics
+                </button>
+                
+                <button class="nav-item" onclick="showSection('settings')">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                    </svg>
+                    Settings
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <h1 class="header-title" id="pageTitle">Dashboard</h1>
+                </div>
+                
+                <div class="header-right">
+                    <button class="notification-btn">
+                        🔔
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div class="admin-avatar">A</div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value" id="totalTournaments">47</div>
+                        <div class="stat-label">Total Tournaments</div>
+                        <div class="stat-change positive">+12% this month</div>
+                    </div>
+                    
+                    <div class="stat-card gold">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="totalPlayers">2,847</div>
+                        <div class="stat-label">Total Players</div>
+                        <div class="stat-change positive">+24% this month</div>
+                    </div>
+                    
+                    <div class="stat-card green">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-value" id="onlinePlayers">156</div>
+                        <div class="stat-label">Online Players</div>
+                        <div class="stat-change positive">+5% since yesterday</div>
+                    </div>
+                    
+                    <div class="stat-card red">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value">₹<span id="walletHeld">1,24,500</span></div>
+                        <div class="stat-label">Wallet Balance Held</div>
+                        <div class="stat-change positive">+8% this week</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <div class="quick-action-card" onclick="openCreateTournamentModal()">
+                        <div class="quick-action-icon">➕</div>
+                        <h3>Create Tournament</h3>
+                        <p>Start a new tournament</p>
+                    </div>
+                    
+                    <div class="quick-action-card" onclick="showSection('analytics')">
+                        <div class="quick-action-icon">📊</div>
+                        <h3>View Payments</h3>
+                        <p>Check payment history</p>
+                    </div>
+                    
+                    <div class="quick-action-card" onclick="sendNotification()">
+                        <div class="quick-action-icon">📢</div>
+                        <h3>Send Notification</h3>
+                        <p>Notify all players</p>
+                    </div>
+                    
+                    <div class="quick-action-card" onclick="showSection('players')">
+                        <div class="quick-action-icon">👥</div>
+                        <h3>Manage Players</h3>
+                        <p>View player details</p>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Event</th>
+                                <th>Player/Tournament</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentActivity">
+                            <!-- Recent activity will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tournaments Section -->
+            <section id="tournaments" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Tournament Management</h2>
+                        <button class="btn btn-primary" onclick="openCreateTournamentModal()">
+                            ➕ Create Tournament
+                        </button>
+                    </div>
+                    
+                    <div class="search-bar">
+                        <input type="text" class="form-input search-input" placeholder="Search tournaments..." id="tournamentSearch">
+                        <select class="form-input filter-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="live">Live</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="past">Completed</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="loadTournaments()">Filter</button>
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tournament</th>
+                                <th>Date & Time</th>
+                                <th>Players</th>
+                                <th>Prize Pool</th>
+                                <th>Entry Fee</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tournamentsTable">
+                            <!-- Tournaments will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Players Section -->
+            <section id="players" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Player Management</h2>
+                        <button class="btn btn-secondary" onclick="exportPlayers()">
+                            📊 Export Data
+                        </button>
+                    </div>
+                    
+                    <div class="search-bar">
+                        <input type="text" class="form-input search-input" placeholder="Search players..." id="playerSearch">
+                        <select class="form-input filter-select" id="playerStatusFilter">
+                            <option value="">All Players</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="loadPlayers()">Filter</button>
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Free Fire UID</th>
+                                <th>Tournaments</th>
+                                <th>Wins</th>
+                                <th>Wallet Balance</th>
+                                <th>Referrals</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playersTable">
+                            <!-- Players will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Analytics Dashboard</h2>
+                        <select class="form-input" style="width: auto;" id="analyticsTimeRange">
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 3 months</option>
+                        </select>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-value">₹<span id="totalRevenue">85,420</span></div>
+                            <div class="stat-label">Total Revenue</div>
+                        </div>
+                        
+                        <div class="stat-card gold">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-value" id="avgTournamentSize">34</div>
+                            <div class="stat-label">Avg Tournament Size</div>
+                        </div>
+                        
+                        <div class="stat-card green">
+                            <div class="stat-icon">🔗</div>
+                            <div class="stat-value" id="referralConversion">12.5%</div>
+                            <div class="stat-label">Referral Conversion</div>
+                        </div>
+                        
+                        <div class="stat-card red">
+                            <div class="stat-icon">⭐</div>
+                            <div class="stat-value" id="playerRetention">68%</div>
+                            <div class="stat-label">Player Retention</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="card">
+                            <h3>Daily Sign-ups</h3>
+                            <div class="chart-container">
+                                <canvas id="signupsChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>Revenue Trend</h3>
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Real-time Player Activity</h3>
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">System Settings</h2>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div>
+                            <h3>Payment Gateway Configuration</h3>
+                            <div class="form-group">
+                                <label class="form-label">Razorpay Key ID</label>
+                                <input type="text" class="form-input" id="razorpayKeyId" placeholder="Enter Razorpay Key ID">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Razorpay Secret</label>
+                                <input type="password" class="form-input" id="razorpaySecret" placeholder="Enter Razorpay Secret">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Payment Mode</label>
+                                <select class="form-input" id="paymentMode">
+                                    <option value="live">Live</option>
+                                    <option value="test">Test</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>Referral System</h3>
+                            <div class="form-group">
+                                <label class="form-label">Referral Bonus (₹)</label>
+                                <input type="number" class="form-input" id="referralBonus" value="50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Min. Referral Amount</label>
+                                <input type="number" class="form-input" id="minReferralAmount" value="25">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Referral Expiry (days)</label>
+                                <input type="number" class="form-input" id="referralExpiry" value="30">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid" style="margin-top: 32px;">
+                        <div>
+                            <h3>Tournament Settings</h3>
+                            <div class="form-group">
+                                <label class="form-label">Default Entry Fee (₹)</label>
+                                <input type="number" class="form-input" id="defaultEntryFee" value="50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Players per Tournament</label>
+                                <input type="number" class="form-input" id="maxPlayersPerTournament" value="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Registration Deadline (hours)</label>
+                                <input type="number" class="form-input" id="registrationDeadline" value="2">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>Admin Users</h3>
+                            <div class="form-group">
+                                <label class="form-label">Add Admin Email</label>
+                                <input type="email" class="form-input" id="newAdminEmail" placeholder="admin@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Admin Role</label>
+                                <select class="form-input" id="adminRole">
+                                    <option value="admin">Admin</option>
+                                    <option value="moderator">Moderator</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="addAdmin()">Add Admin</button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; margin-top: 32px;">
+                        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+                        <button class="btn btn-secondary" onclick="loadSettings()">🔄 Reset to Default</button>
+                        <button class="btn btn-danger" onclick="clearCache()">🗑️ Clear Cache</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Create Tournament Modal -->
+    <div id="createTournamentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Tournament</h3>
+                <button class="close-btn" onclick="closeModal('createTournamentModal')">&times;</button>
+            </div>
+            
+            <form id="tournamentForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Tournament Title</label>
+                        <input type="text" class="form-input" id="tournamentTitle" placeholder="e.g., Sunday Clash" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Date & Time</label>
+                        <input type="datetime-local" class="form-input" id="tournamentDateTime" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Map</label>
+                        <select class="form-input" id="tournamentMap" required>
+                            <option value="">Select Map</option>
+                            <option value="Bermuda">Bermuda</option>
+                            <option value="Purgatory">Purgatory</option>
+                            <option value="Kalahari">Kalahari</option>
+                            <option value="Alpine">Alpine</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Prize Pool (₹)</label>
+                        <input type="number" class="form-input" id="tournamentPrize" placeholder="1000" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Entry Fee (₹)</label>
+                        <input type="number" class="form-input" id="tournamentEntryFee" placeholder="50" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Max Players</label>
+                        <input type="number" class="form-input" id="tournamentMaxPlayers" placeholder="100" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Room ID</label>
+                        <input type="text" class="form-input" id="tournamentRoomId" placeholder="12345" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Room Password</label>
+                        <input type="text" class="form-input" id="tournamentRoomPass" placeholder="FIRE123" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input form-textarea" id="tournamentDescription" placeholder="Tournament description..."></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 16px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary">🎮 Create Tournament</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createTournamentModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            // Add your Firebase config here
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Global variables
+        let currentUser = null;
+        let sidebarOpen = false;
+
+        // Sample data for demo
+        const sampleTournaments = [
+            {
+                id: 'tourn1',
+                title: 'Sunday Clash',
+                datetime: '2025-01-20T17:00',
+                map: 'Bermuda',
+                prize: 1000,
+                entryFee: 50,
+                maxPlayers: 100,
+                registeredPlayers: 47,
+                status: 'live',
+                roomId: '12345',
+                roomPass: 'FIRE123'
+            },
+            {
+                id: 'tourn2',
+                title: 'Weekly Championship',
+                datetime: '2025-01-22T19:00',
+                map: 'Purgatory',
+                prize: 2500,
+                entryFee: 100,
+                maxPlayers: 50,
+                registeredPlayers: 23,
+                status: 'upcoming',
+                roomId: '67890',
+                roomPass: 'CHAMP25'
+            },
+            {
+                id: 'tourn3',
+                title: 'Midnight Battle',
+                datetime: '2025-01-19T23:00',
+                map: 'Kalahari',
+                prize: 500,
+                entryFee: 25,
+                maxPlayers: 80,
+                registeredPlayers: 80,
+                status: 'past',
+                roomId: '11111',
+                roomPass: 'NIGHT1'
+            }
+        ];
+
+        const samplePlayers = [
+            {
+                id: 'player1',
+                name: 'Gaming Pro',
+                uid: '987654321',
+                email: 'gamer@example.com',
+                tournaments: 24,
+                wins: 8,
+                walletBalance: 500,
+                referrals: 15,
+                status: 'active',
+                joinDate: '2024-12-01'
+            },
+            {
+                id: 'player2',
+                name: 'Fire Master',
+                uid: '123456789',
+                email: 'fire@example.com',
+                tournaments: 18,
+                wins: 12,
+                walletBalance: 750,
+                referrals: 8,
+                status: 'active',
+                joinDate: '2024-11-15'
+            },
+            {
+                id: 'player3',
+                name: 'Battle King',
+                uid: '555666777',
+                email: 'king@example.com',
+                tournaments: 32,
+                wins: 5,
+                walletBalance: 120,
+                referrals: 22,
+                status: 'inactive',
+                joinDate: '2024-10-20'
+            }
+        ];
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            loadDashboardData();
+            loadTournaments();
+            loadPlayers();
+            initializeCharts();
+        });
+
+        function initializeApp() {
+            // Auth state listener
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                } else {
+                    // Redirect to login if needed
+                    console.log('Admin not authenticated');
+                }
+            });
+
+            // Set up form submission
+            document.getElementById('tournamentForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                createTournament();
+            });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebarOpen = !sidebarOpen;
+            
+            if (sidebarOpen) {
+                sidebar.classList.add('open');
+                mainContent.classList.add('shifted');
+            } else {
+                sidebar.classList.remove('open');
+                mainContent.classList.remove('shifted');
+            }
+        }
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Update page title
+            const titles = {
+                dashboard: 'Dashboard',
+                tournaments: 'Tournament Management',
+                players: 'Player Management',
+                analytics: 'Analytics Dashboard',
+                settings: 'System Settings'
+            };
+            document.getElementById('pageTitle').textContent = titles[sectionId];
+            
+            // Close sidebar on mobile
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        function loadDashboardData() {
+            // Load recent activity
+            const activities = [
+                { time: '2 mins ago', event: 'New Registration', detail: 'Gaming Pro joined Sunday Clash', amount: '₹50', status: 'success' },
+                { time: '5 mins ago', event: 'Payment Received', detail: 'Fire Master topped up wallet', amount: '₹500', status: 'success' },
+                { time: '12 mins ago', event: 'Tournament Created', detail: 'Weekly Championship', amount: '₹2500', status: 'info' },
+                { time: '1 hour ago', event: 'Player Won', detail: 'Battle King won Midnight Battle', amount: '₹500', status: 'success' },
+                { time: '2 hours ago', event: 'Referral Bonus', detail: 'Gaming Pro earned referral bonus', amount: '₹50', status: 'success' }
+            ];
+
+            const tbody = document.getElementById('recentActivity');
+            tbody.innerHTML = activities.map(activity => `
+                <tr>
+                    <td>${activity.time}</td>
+                    <td>${activity.event}</td>
+                    <td>${activity.detail}</td>
+                    <td>${activity.amount}</td>
+                    <td><span class="status-badge status-${activity.status}">${activity.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function loadTournaments() {
+            const tbody = document.getElementById('tournamentsTable');
+            tbody.innerHTML = sampleTournaments.map(tournament => `
+                <tr>
+                    <td>
+                        <div style="font-weight: bold;">${tournament.title}</div>
+                        <div style="font-size: 12px; color: #64748B;">Map: ${tournament.map}</div>
+                    </td>
+                    <td>${formatDateTime(tournament.datetime)}</td>
+                    <td>${tournament.registeredPlayers}/${tournament.maxPlayers}</td>
+                    <td>₹${tournament.prize}</td>
+                    <td>₹${tournament.entryFee}</td>
+                    <td><span class="status-badge status-${tournament.status}">${tournament.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="editTournament('${tournament.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTournament('${tournament.id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadPlayers() {
+            const tbody = document.getElementById('playersTable');
+            tbody.innerHTML = samplePlayers.map(player => `
+                <tr>
+                    <td>
+                        <div style="font-weight: bold;">${player.name}</div>
+                        <div style="font-size: 12px; color: #64748B;">${player.email}</div>
+                    </td>
+                    <td>${player.uid}</td>
+                    <td>${player.tournaments}</td>
+                    <td>${player.wins}</td>
+                    <td>₹${player.walletBalance}</td>
+                    <td>${player.referrals}</td>
+                    <td><span class="status-badge status-${player.status}">${player.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="viewPlayer('${player.id}')">View</button>
+                        <button class="btn btn-sm btn-danger" onclick="suspendPlayer('${player.id}')">Suspend</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatDateTime(dateTimeString) {
+            const date = new Date(dateTimeString);
+            return date.toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function openCreateTournamentModal() {
+            document.getElementById('createTournamentModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function createTournament() {
+            const formData = {
+                title: document.getElementById('tournamentTitle').value,
+                datetime: document.getElementById('tournamentDateTime').value,
+                map: document.getElementById('tournamentMap').value,
+                prize: parseInt(document.getElementById('tournamentPrize').value),
+                entryFee: parseInt(document.getElementById('tournamentEntryFee').value),
+                maxPlayers: parseInt(document.getElementById('tournamentMaxPlayers').value),
+                roomId: document.getElementById('tournamentRoomId').value,
+                roomPass: document.getElementById('tournamentRoomPass').value,
+                description: document.getElementById('tournamentDescription').value,
+                status: 'upcoming',
+                registeredPlayers: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('tournaments').add(formData);
+                closeModal('createTournamentModal');
+                showToast('Tournament created successfully!');
+                loadTournaments();
+                
+                // Reset form
+                document.getElementById('tournamentForm').reset();
+                
+            } catch (error) {
+                console.error('Error creating tournament:', error);
+                showToast('Error creating tournament', 'error');
+            }
+        }
+
+        function editTournament(tournamentId) {
+            // Implement edit functionality
+            showToast('Edit functionality will be implemented');
+        }
+
+        function deleteTournament(tournamentId) {
+            if (confirm('Are you sure you want to delete this tournament?')) {
+                // Implement delete functionality
+                showToast('Tournament deleted successfully!');
+                loadTournaments();
+            }
+        }
+
+        function viewPlayer(playerId) {
+            // Implement player view functionality
+            showToast('Player details will be shown');
+        }
+
+        function suspendPlayer(playerId) {
+            if (confirm('Are you sure you want to suspend this player?')) {
+                // Implement suspend functionality
+                showToast('Player suspended successfully!');
+                loadPlayers();
+            }
+        }
+
+        function sendNotification() {
+            const message = prompt('Enter notification message:');
+            if (message) {
+                // Implement notification sending
+                showToast('Notification sent to all players!');
+            }
+        }
+
+        function exportPlayers() {
+            // Implement export functionality
+            showToast('Player data exported successfully!');
+        }
+
+        function addAdmin() {
+            const email = document.getElementById('newAdminEmail').value;
+            const role = document.getElementById('adminRole').value;
+            
+            if (email) {
+                // Implement add admin functionality
+                showToast(`Admin ${email} added successfully!`);
+                document.getElementById('newAdminEmail').value = '';
+            }
+        }
+
+        function saveSettings() {
+            // Implement settings save functionality
+            showToast('Settings saved successfully!');
+        }
+
+        function loadSettings() {
+            // Implement settings load functionality
+            showToast('Settings reset to default!');
+        }
+
+        function clearCache() {
+            if (confirm('Are you sure you want to clear all cache?')) {
+                // Implement cache clearing
+                showToast('Cache cleared successfully!');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function initializeCharts() {
+            // Sign-ups Chart
+            const signupsCtx = document.getElementById('signupsChart').getContext('2d');
+            new Chart(signupsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Daily Sign-ups',
+                        data: [12, 19, 3, 5, 2, 3, 9],
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Revenue Chart
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            new Chart(revenueCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Revenue',
+                        data: [12000, 19000, 15000, 25000],
+                        backgroundColor: '#FBBF24'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            new Chart(activityCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Players', 'Inactive Players', 'New Registrations'],
+                    datasets: [{
+                        data: [156, 2691, 75],
+                        backgroundColor: ['#059669', '#CBD5E1', '#2563EB']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth < 768 && sidebarOpen && !event.target.closest('.sidebar') && !event.target.closest('.menu-toggle')) {
+                toggleSidebar();
+            }
+        });
+    </script>
+</body>
+</html>
