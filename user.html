@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Tournaments - Play & Win</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    
+    <!-- Razorpay SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- Lottie for animations -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #E2E8F0;
+            --text-dark: #1E293B;
+            --accent-blue: #2563EB;
+            --accent-gold: #FBBF24;
+            --accent-red: #DC2626;
+            --border: #CBD5E1;
+            --success-green: #10B981;
+            --shadow-light: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-medium: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Russo One', cursive;
+            background: var(--bg-primary);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: var(--shadow-medium);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--accent-blue), #1E40AF);
+            color: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .wallet-balance {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-balance:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 70px;
+            z-index: 99;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-tab.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--accent-blue), #1E40AF);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            padding: 1rem;
+            min-height: 60vh;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Tournament Cards */
+        .tournaments-tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 0.25rem;
+        }
+
+        .tournament-tab {
+            flex: 1;
+            padding: 0.75rem;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .tournament-tab.active {
+            background: white;
+            color: var(--accent-blue);
+            box-shadow: var(--shadow-light);
+        }
+
+        .tournament-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .tournament-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .tournament-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .tournament-title {
+            font-size: 1.3rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .tournament-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-live {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .status-upcoming {
+            background: var(--accent-gold);
+            color: var(--text-dark);
+        }
+
+        .tournament-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-item i {
+            color: var(--accent-blue);
+            width: 16px;
+        }
+
+        .tournament-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .players-count {
+            font-size: 0.9rem;
+            color: #6B7280;
+        }
+
+        .join-button {
+            background: var(--accent-blue);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .join-button:hover {
+            background: #1E40AF;
+            transform: translateY(-1px);
+        }
+
+        .join-button:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Referral Section */
+        .referral-section {
+            background: linear-gradient(135deg, var(--accent-gold), #F59E0B);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: var(--text-dark);
+            text-align: center;
+        }
+
+        .referral-code {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            word-break: break-all;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .share-btn {
+            padding: 0.75rem;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .share-btn.whatsapp { background: #25D366; }
+        .share-btn.telegram { background: #0088CC; }
+        .share-btn.copy { background: var(--accent-blue); }
+
+        .share-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .earnings-display {
+            background: rgba(255,255,255,0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        /* Profile Section */
+        .profile-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-light);
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-gold));
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .profile-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-uid {
+            color: #6B7280;
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-dark);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Registrations List */
+        .registration-item {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .registration-info h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .registration-date {
+            font-size: 0.8rem;
+            color: #6B7280;
+        }
+
+        .registration-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6B7280;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        /* Animations */
+        @keyframes slideInUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .content-section.active {
+            animation: slideInUp 0.4s ease;
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 0.5rem 0;
+            z-index: 100;
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav-item i {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+            color: #6B7280;
+        }
+
+        .bottom-nav-item span {
+            font-size: 0.7rem;
+            color: #6B7280;
+        }
+
+        .bottom-nav-item.active i,
+        .bottom-nav-item.active span {
+            color: var(--accent-blue);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 320px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .tournament-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Success Animations */
+        .success-animation {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+        }
+
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 1rem;
+            background: var(--success-green);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1001;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-fire"></i> FF Tournaments
+            </div>
+            <div class="wallet-balance" onclick="openTopUpModal()">
+                <i class="fas fa-wallet"></i> ₹<span id="walletAmount">500</span>
+            </div>
+        </div>
+
+        <!-- Hero Section -->
+        <div class="hero">
+            <div class="hero-content">
+                <h1>Free Fire Tournaments</h1>
+                <p>Join elite tournaments, win amazing prizes, and climb the leaderboards!</p>
+                <button class="cta-button" onclick="showSection('tournaments')">
+                    <i class="fas fa-trophy"></i> Play Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showSection('tournaments')">
+                <i class="fas fa-trophy"></i> Tournaments
+            </div>
+            <div class="nav-tab" onclick="showSection('referral')">
+                <i class="fas fa-share-alt"></i> Refer & Earn
+            </div>
+            <div class="nav-tab" onclick="showSection('profile')">
+                <i class="fas fa-user"></i> Profile
+            </div>
+        </div>
+
+        <!-- Tournaments Section -->
+        <div id="tournaments" class="content-section active">
+            <div class="tournaments-tabs">
+                <div class="tournament-tab active" onclick="showTournaments('live')">Live</div>
+                <div class="tournament-tab" onclick="showTournaments('upcoming')">Upcoming</div>
+                <div class="tournament-tab" onclick="showTournaments('past')">Past</div>
+            </div>
+            
+            <div id="tournaments-container">
+                <!-- Tournament cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Referral Section -->
+        <div id="referral" class="content-section">
+            <div class="referral-section">
+                <h2><i class="fas fa-gift"></i> Refer Friends & Earn!</h2>
+                <p>Earn ₹50 for every friend who joins using your code</p>
+                
+                <div class="referral-code" id="referralCode">FF2025ROHAN</div>
+                
+                <div class="share-buttons">
+                    <button class="share-btn whatsapp" onclick="shareReferral('whatsapp')">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                    <button class="share-btn telegram" onclick="shareReferral('telegram')">
+                        <i class="fab fa-telegram"></i>
+                    </button>
+                    <button class="share-btn copy" onclick="copyReferralCode()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                
+                <div class="earnings-display">
+                    <h3>Your Earnings</h3>
+                    <p style="font-size: 1.5rem; margin: 0.5rem 0;">₹<span id="referralEarnings">250</span></p>
+                    <p style="font-size: 0.9rem;">5 friends joined</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profile" class="content-section">
+            <div class="profile-card">
+                <div class="profile-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="profile-info">
+                    <h3 id="userName">Rohan Kumar</h3>
+                    <p class="profile-uid">FF UID: <span id="userUID">987654321</span></p>
+                    <div class="action-buttons">
+                        <button class="action-btn btn-primary" onclick="openTopUpModal()">
+                            <i class="fas fa-plus"></i> Top Up
+                        </button>
+                        <button class="action-btn btn-secondary" onclick="showRegistrations()">
+                            <i class="fas fa-list"></i> My Games
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="registrations-list">
+                <!-- User registrations will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="bottom-nav-item active" onclick="showSection('tournaments')">
+                <i class="fas fa-trophy"></i>
+                <span>Tournaments</span>
+            </div>
+            <div class="bottom-nav-item" onclick="showSection('referral')">
+                <i class="fas fa-share-alt"></i>
+                <span>Refer</span>
+            </div>
+            <div class="bottom-nav-item" onclick="showSection('profile')">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registrationModal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('registrationModal')">&times;</button>
+            <h2><i class="fas fa-gamepad"></i> Join Tournament</h2>
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label class="form-label">Player Name</label>
+                    <input type="text" class="form-input" id="playerName" value="Rohan Kumar" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Free Fire UID</label>
+                    <input type="text" class="form-input" id="playerUID" value="987654321" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Entry Fee</label>
+                    <input type="text" class="form-input" id="entryFee" readonly>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="action-btn btn-secondary" onclick="closeModal('registrationModal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="action-btn btn-primary">
+                        <i class="fas fa-credit-card"></i> Pay & Join
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top Up Modal -->
+    <div id="topUpModal" class="modal-overlay">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('topUpModal')">&times;</button>
+            <h2><i class="fas fa-wallet"></i> Top Up Wallet</h2>
+            <div class="form-group">
+                <label class="form-label">Select Amount</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0;">
+                    <button class="action-btn btn-secondary" onclick="selectAmount(100)">₹100</button>
+                    <button class="action-btn btn-secondary" onclick="selectAmount(250)">₹250</button>
+                    <button class="action-btn btn-secondary" onclick="selectAmount(500)">₹500</button>
+                    <button class="action-btn btn-secondary" onclick="selectAmount(1000)">₹1000</button>
+                </div>
+                <input type="number" class="form-input" id="customAmount" placeholder="Enter custom amount" min="50">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="action-btn btn-secondary" onclick="closeModal('topUpModal')">
+                    Cancel
+                </button>
+                <button type="button" class="action-btn btn-primary" onclick="processTopUp()">
+                    <i class="fas fa-credit-card"></i> Pay Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Animation -->
+    <div id="successAnimation" class="success-animation">
+        <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_jbrw3hcz.json" background="transparent" speed="1" style="width: 150px; height: 150px;" autoplay></lottie-player>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notificationText"></span>
+    </div>
+
+    <script>
+        // Firebase Configuration (Replace with your config)
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-auth-domain",
+            projectId: "your-project-id",
+            storageBucket: "your-storage-bucket",
+            messagingSenderId: "your-messaging-sender-id",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Current user data
+        let currentUser = {
+            id: 'user123',
+            name: 'Rohan Kumar',
+            uid: '987654321',
+            walletBalance: 500,
+            referralCode: 'FF2025ROHAN',
+            referralEarnings: 250
+        };
+
+        // Tournament data
+        let tournaments = [
+            {
+                id: 'tour1',
+                title: 'Friday Night Clash',
+                matchTime: '2025-01-20T20:00',
+                map: 'Bermuda',
+                prize: 5000,
+                entryFee: 50,
+                roomId: '12345',
+                roomPass: 'abcde',
+                maxPlayers: 100,
+                currentPlayers: 67,
+                status: 'live'
+            },
+            {
+                id: 'tour2',
+                title: 'Weekend Warriors',
+                matchTime: '2025-01-22T18:00',
+                map: 'Purgatory',
+                prize: 10000,
+                entryFee: 100,
+                roomId: '67890',
+                roomPass: 'fghij',
+                maxPlayers: 50,
+                currentPlayers: 23,
+                status: 'upcoming'
+            },
+            {
+                id: 'tour3',
+                title: 'Sunday Special',
+                matchTime: '2025-01-23T16:00',
+                map: 'Kalahari',
+                prize: 3000,
+                entryFee: 30,
+                roomId: '11111',
+                roomPass: 'klmno',
+                maxPlayers: 80,
+                currentPlayers: 12,
+                status: 'upcoming'
+            }
+        ];
+
+        // User registrations
+        let userRegistrations = [
+            {
+                id: 'reg1',
+                tournamentId: 'tour1',
+                tournamentTitle: 'Friday Night Clash',
+                joinDate: '2025-01-19',
+                status: 'active'
+            }
+        ];
+
+        // App State
+        let currentSection = 'tournaments';
+        let currentTournamentTab = 'live';
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTournaments();
+            loadUserProfile();
+            loadRegistrations();
+            
+            // Simulate real-time updates
+            setInterval(updateLiveData, 30000);
+        });
+
+        // Section Navigation
+        function showSection(section) {
+            // Update nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.closest('.nav-tab').classList.add('active');
+            
+            // Update bottom nav
+            document.querySelectorAll('.bottom-nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.bottom-nav-item[onclick="showSection('${section}')"]`).classList.add('active');
+            
+            // Show section
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(section).classList.add('active');
+            
+            currentSection = section;
+            
+            if (section === 'profile') {
+                loadRegistrations();
+            }
+        }
+
+        // Tournament Management
+        function showTournaments(tab) {
+            // Update tournament tabs
+            document.querySelectorAll('.tournament-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentTournamentTab = tab;
+            loadTournaments();
+        }
+
+        function loadTournaments() {
+            const container = document.getElementById('tournaments-container');
+            const filteredTournaments = tournaments.filter(t => t.status === currentTournamentTab);
+            
+            if (filteredTournaments.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #6B7280;">
+                        <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>No ${currentTournamentTab} tournaments found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filteredTournaments.map(tournament => `
+                <div class="tournament-card">
+                    <div class="tournament-header">
+                        <div>
+                            <h3 class="tournament-title">${tournament.title}</h3>
+                            <div class="tournament-status status-${tournament.status}">
+                                ${tournament.status.toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tournament-details">
+                        <div class="detail-item">
+                            <i class="fas fa-clock"></i>
+                            <span>${formatTime(tournament.matchTime)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-map"></i>
+                            <span>${tournament.map}</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-trophy"></i>
+                            <span>₹${tournament.prize.toLocaleString()}</span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-ticket-alt"></i>
+                            <span>₹${tournament.entryFee}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="tournament-footer">
+                        <div class="players-count">
+                            <i class="fas fa-users"></i>
+                            ${tournament.currentPlayers}/${tournament.maxPlayers} players
+                        </div>
+                        <button class="join-button" onclick="openRegistrationModal('${tournament.id}')"
+                                ${tournament.currentPlayers >= tournament.maxPlayers ? 'disabled' : ''}>
+                            ${tournament.currentPlayers >= tournament.maxPlayers ? 'Full' : 'Join Now'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('en-IN') + ' ' + date.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Registration Modal
+        function openRegistrationModal(tournamentId) {
+            const tournament = tournaments.find(t => t.id === tournamentId);
+            if (!tournament) return;
+            
+            document.getElementById('entryFee').value = `₹${tournament.entryFee}`;
+            document.getElementById('registrationModal').classList.add('active');
+            
+            // Store tournament ID for registration
+            document.getElementById('registrationForm').dataset.tournamentId = tournamentId;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Registration Form Handler
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const tournamentId = this.dataset.tournamentId;
+            const tournament = tournaments.find(t => t.id === tournamentId);
+            
+            if (currentUser.walletBalance < tournament.entryFee) {
+                showNotification('Insufficient wallet balance! Please top up.', 'error');
+                return;
+            }
+            
+            // Show loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<div class="loading"></div> Processing...';
+            submitBtn.disabled = true;
+            
+            try {
+                // Simulate payment processing
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Update tournament
+                tournament.currentPlayers++;
+                
+                // Update user wallet
+                currentUser.walletBalance -= tournament.entryFee;
+                document.getElementById('walletAmount').textContent = currentUser.walletBalance;
+                
+                // Add registration
+                userRegistrations.push({
+                    id: 'reg' + Date.now(),
+                    tournamentId: tournament.id,
+                    tournamentTitle: tournament.title,
+                    joinDate: new Date().toISOString().split('T')[0],
+                    status: 'active'
+                });
+                
+                // Close modal and show success
+                closeModal('registrationModal');
+                showSuccessAnimation();
+                showNotification('Successfully joined tournament! Room details sent to your WhatsApp.', 'success');
+                
+                // Refresh tournaments
+                loadTournaments();
+                
+            } catch (error) {
+                showNotification('Registration failed. Please try again.', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Top Up Functionality
+        function openTopUpModal() {
+            document.getElementById('topUpModal').classList.add('active');
+        }
+
+        function selectAmount(amount) {
+            document.getElementById('customAmount').value = amount;
+            
+            // Update button styles
+            document.querySelectorAll('#topUpModal .btn-secondary').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            });
+            event.target.classList.remove('btn-secondary');
+            event.target.classList.add('btn-primary');
+        }
+
+        async function processTopUp() {
+            const amount = parseInt(document.getElementById('customAmount').value);
+            
+            if (!amount || amount < 50) {
+                showNotification('Minimum top-up amount is ₹50', 'error');
+                return;
+            }
+            
+            // Initialize Razorpay (Replace with your key)
+            const options = {
+                key: 'rzp_test_your_key_here',
+                amount: amount * 100, // Convert to paise
+                currency: 'INR',
+                name: 'FF Tournaments',
+                description: 'Wallet Top-up',
+                image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzI1NjNFQiIvPgo8cGF0aCBkPSJNMjAgMTBMMjUgMTVIMjJWMjVIMThWMTVIMTVMMjAgMTBaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K',
+                handler: function(response) {
+                    // Payment successful
+                    currentUser.walletBalance += amount;
+                    document.getElementById('walletAmount').textContent = currentUser.walletBalance;
+                    
+                    closeModal('topUpModal');
+                    showSuccessAnimation();
+                    showNotification(`₹${amount} added to your wallet successfully!`, 'success');
+                },
+                prefill: {
+                    name: currentUser.name,
+                    contact: '9999999999',
+                    email: 'user@example.com'
+                },
+                theme: {
+                    color: '#2563EB'
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        // Referral Functions
+        function shareReferral(platform) {
+            const referralText = `Join Free Fire Tournaments and win amazing prizes! Use my referral code: ${currentUser.referralCode}`;
+            const appUrl = 'https://fftournaments.app';
+            
+            let shareUrl = '';
+            
+            switch (platform) {
+                case 'whatsapp':
+                    shareUrl = `https://wa.me/?text=${encodeURIComponent(referralText + ' ' + appUrl)}`;
+                    break;
+                case 'telegram':
+                    shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(referralText)}`;
+                    break;
+            }
+            
+            if (shareUrl) {
+                window.open(shareUrl, '_blank');
+            }
+        }
+
+        function copyReferralCode() {
+            navigator.clipboard.writeText(currentUser.referralCode).then(() => {
+                showNotification('Referral code copied to clipboard!', 'success');
+            });
+        }
+
+        // Profile Management
+        function loadUserProfile() {
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userUID').textContent = currentUser.uid;
+            document.getElementById('walletAmount').textContent = currentUser.walletBalance;
+            document.getElementById('referralCode').textContent = currentUser.referralCode;
+            document.getElementById('referralEarnings').textContent = currentUser.referralEarnings;
+        }
+
+        function loadRegistrations() {
+            const container = document.getElementById('registrations-list');
+            
+            if (userRegistrations.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #6B7280;">
+                        <i class="fas fa-gamepad" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>No tournament registrations yet</p>
+                        <button class="action-btn btn-primary" onclick="showSection('tournaments')" style="margin-top: 1rem;">
+                            Join Your First Tournament
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = userRegistrations.map(reg => `
+                <div class="registration-item">
+                    <div class="registration-info">
+                        <h4>${reg.tournamentTitle}</h4>
+                        <p class="registration-date">Joined: ${new Date(reg.joinDate).toLocaleDateString('en-IN')}</p>
+                    </div>
+                    <div class="registration-actions">
+                        <button class="btn-small btn-primary" onclick="viewTournamentDetails('${reg.tournamentId}')">
+                            View
+                        </button>
+                        ${reg.status === 'active' ? `
+                            <button class="btn-small" style="background: var(--accent-red); color: white;" onclick="cancelRegistration('${reg.id}')">
+                                Cancel
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewTournamentDetails(tournamentId) {
+            const tournament = tournaments.find(t => t.id === tournamentId);
+            if (tournament) {
+                showNotification(`Room ID: ${tournament.roomId} | Password: ${tournament.roomPass}`, 'info');
+            }
+        }
+
+        function cancelRegistration(registrationId) {
+            if (confirm('Are you sure you want to cancel this registration?')) {
+                const regIndex = userRegistrations.findIndex(r => r.id === registrationId);
+                if (regIndex > -1) {
+                    userRegistrations.splice(regIndex, 1);
+                    loadRegistrations();
+                    showNotification('Registration cancelled successfully!', 'success');
+                }
+            }
+        }
+
+        // Utility Functions
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function showSuccessAnimation() {
+            const animation = document.getElementById('successAnimation');
+            animation.style.display = 'block';
+            
+            setTimeout(() => {
+                animation.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateLiveData() {
+            // Simulate real-time updates for live tournaments
+            tournaments.forEach(tournament => {
+                if (tournament.status === 'live' && tournament.currentPlayers < tournament.maxPlayers) {
+                    if (Math.random() < 0.3) { // 30% chance to add a player
+                        tournament.currentPlayers++;
+                    }
+                }
+            });
+            
+            if (currentSection === 'tournaments' && currentTournamentTab === 'live') {
+                loadTournaments();
+            }
+        }
+
+        // Handle back button for single page app
+        window.addEventListener('popstate', function(event) {
+            // Handle browser back button if needed
+        });
+
+        // Service Worker for PWA (optional)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }, function(err) {
+                    console.log('ServiceWorker registration failed');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
